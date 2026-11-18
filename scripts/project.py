@@ -78,16 +78,42 @@ def inspect_app(app, contract):
 
 def build():
     subprocess.run(['bash', str(ROOT / 'scripts/build.sh')], check=True)
+    return assemble_kit()
+
+
+def assemble_kit():
     KIT.mkdir(parents=True, exist_ok=True)
     library = KIT / 'YouTubeMod.dylib'
     shutil.copy2(ROOT / 'build/YouTubeMod.dylib', library)
     notices = KIT / 'THIRD_PARTY_NOTICES.txt'
-    notices.write_text('YouTubeModIos — MIT\n\n' + (ROOT / 'LICENSE').read_text() + '\nNative settings integration adapted from YTKACE:\n\n' + (ROOT / 'licenses/YTKACE-MIT.txt').read_text())
-    manifest = {'notices_sha256': digest(notices), 'format': 1, 'version': (ROOT / 'VERSION').read_text().strip(),
+    notices.write_text('YouTubeModIos — MIT\n\n' + (ROOT / 'LICENSE').read_text() + '\nFeature engine integrated from YTKACE:\n\n' + (ROOT / 'licenses/YTKACE-MIT.txt').read_text() + '\n' + (ROOT / 'vendor/ytkace/THIRD_PARTY_NOTICES.md').read_text() + '\n' + (ROOT / 'vendor/ytkace/Vendor/FFmpeg/COPYING.LGPLv2.1').read_text() + '\n' + (ROOT / 'vendor/ytkace/Vendor/FFmpeg/COPYING.LGPLv3').read_text())
+    from relink_kit import create as create_relink_kit
+    create_relink_kit(KIT)
+    with notices.open('a') as file:
+        file.write('\n' + (ROOT / 'vendor/ytkace/Tweak/Features/Playback/PlaybackFixHooks.mm').read_text().split('*/', 1)[0] + '*/\n')
+    resources = KIT / 'YTKACE.bundle'
+    if resources.exists():
+        shutil.rmtree(resources)
+    shutil.copytree(ROOT / 'vendor/ytkace/Resources/YTKACE.bundle', resources)
+    resource_hashes = {str(p.relative_to(KIT)): digest(p) for p in resources.rglob('*') if p.is_file()}
+    manifest = {'engine': {'name': 'YTKACE', 'version': '1.1.8', 'commit': '5f8cb77bbd50249d2561a129afd3bb04313568ee'}, 'resources': resource_hashes, 'notices_sha256': digest(notices), 'format': 1, 'version': (ROOT / 'VERSION').read_text().strip(),
                 'library_sha256': digest(library),
                 'contract': json.loads((ROOT / 'compatibility/contract.json').read_text())}
     (KIT / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     return {'kit': str(KIT), 'version': manifest['version'], 'device_tested': False}
+
+
+def copy_resources(kit, app, resources):
+    for relative, expected in resources.items():
+        parts = PurePosixPath(relative)
+        if parts.is_absolute() or '..' in parts.parts or not parts.parts or parts.parts[0] != 'YTKACE.bundle' or '\\' in relative:
+            raise ValueError('Unsafe resource path')
+        resource = kit.joinpath(*parts.parts)
+        if not resource.resolve().is_relative_to(kit.resolve()) or resource.is_symlink() or digest(resource) != expected:
+            raise ValueError('Invalid resource checksum')
+        destination = app.joinpath(*parts.parts)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(resource, destination)
 
 
 def package(source, output, kit, allow_untested):
@@ -124,8 +150,13 @@ def package(source, output, kit, allow_untested):
             if digest(notices) != manifest['notices_sha256']:
                 raise ValueError('Invalid third-party notices checksum')
             shutil.copy2(notices, app / 'YouTubeMod-Licenses.txt')
+        copy_resources(kit, app, manifest.get('resources', {}))
         main.write_bytes(inject(main.read_bytes()))
         info['YouTubeModVersion'] = manifest['version']
+        info['UIFileSharingEnabled'] = True
+        info['LSSupportsOpeningDocumentsInPlace'] = True
+        if manifest.get('engine'):
+            info['YouTubeModEngine'] = manifest['engine']['name'] + ' ' + manifest['engine']['version']
         (app / 'Info.plist').write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_BINARY))
         images = []
         thinned = []

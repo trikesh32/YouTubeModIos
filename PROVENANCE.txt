@@ -16,3 +16,14 @@ integration from Tweak/Settings/NativeSettingsEntry.mm at the same YTKACE commit
 Copyright (c) 2026 YTKACE contributors; MIT license in licenses/YTKACE-MIT.txt.
 Added exact ABI preflight, isolated hooks, idempotence, weak callbacks and tests.
 The original native menu was not copied wholesale; the adaptation is attributed.
+
+0.2.0: full YTKACE 1.1.8 MIT feature engine integrated at the same pinned commit.
+Original sources/resources/notices in vendor/ytkace, exact hashes in vendor/ytkace.lock.json.
+Build-time changes are in scripts/build_full.py: main-queue startup, LiveContainer SSO
+ownership, our tested background hooks, native-only menu, integration defaults and
+settings-restore key whitelist. No closed YTLite source or binary is included.
+FFmpeg 8.1.2 is rebuilt from the official unmodified release source, checksum pinned,
+without GPL/nonfree features. No upstream prebuilt FFmpeg libraries are committed.
+The build kit includes FFmpeg source, object files and instructions for LGPL relinking.
+The resources include the original EJS licence headers; notices accompany the IPA.
+Runtime validation of the full 0.2.0 feature set is pending.

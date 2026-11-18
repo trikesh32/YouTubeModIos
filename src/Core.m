@@ -2,12 +2,21 @@
 #import <objc/runtime.h>
 #include <string.h>
 
+#ifdef YM_FULL
+NSString *const YMBackgroundKey=@"YTKACE.Preference.Playback.BackgroundAudio";
+#else
 NSString *const YMBackgroundKey=@"io.github.trikesh32.youtube.background.v1";
+#endif
 static NSMutableDictionary *Rows(void) {
     static NSMutableDictionary *rows;static dispatch_once_t once;
     dispatch_once(&once,^{rows=[NSMutableDictionary new];});return rows;
 }
-BOOL YMEnabled(NSString *key) { return [NSUserDefaults.standardUserDefaults boolForKey:key]; }
+BOOL YMEnabled(NSString *key) {
+#ifdef YM_FULL
+    if([key isEqual:YMBackgroundKey] && ![NSUserDefaults.standardUserDefaults boolForKey:@"YTKACE.Preference.Enabled"])return NO;
+#endif
+    return [NSUserDefaults.standardUserDefaults boolForKey:key];
+}
 void YMSetEnabled(NSString *key,BOOL enabled) { [NSUserDefaults.standardUserDefaults setBool:enabled forKey:key]; }
 BOOL YMInstallBool(Class cls,SEL selector,NSString *preference) {
     if(!cls)return NO;
@@ -52,7 +61,7 @@ NSDictionary *YMSnapshot(void) {
     @synchronized(Rows()) {
         NSMutableDictionary *copy=[NSMutableDictionary new];
         for(NSString *key in Rows())copy[key]=[Rows()[key] copy];
-        return @{@"version":@"0.1.3",@"background_enabled":@(YMEnabled(YMBackgroundKey)),
-            @"hooks":copy,@"shorts_modified":@NO};
+        return @{@"version":@"0.2.0",@"background_enabled":@(YMEnabled(YMBackgroundKey)),
+            @"hooks":copy,@"shorts_preserved_by_default":@YES};
     }
 }
