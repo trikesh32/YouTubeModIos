@@ -81,7 +81,9 @@ def build():
     KIT.mkdir(parents=True, exist_ok=True)
     library = KIT / 'YouTubeMod.dylib'
     shutil.copy2(ROOT / 'build/YouTubeMod.dylib', library)
-    manifest = {'format': 1, 'version': (ROOT / 'VERSION').read_text().strip(),
+    notices = KIT / 'THIRD_PARTY_NOTICES.txt'
+    notices.write_text('YouTubeModIos — MIT\n\n' + (ROOT / 'LICENSE').read_text() + '\nNative settings integration adapted from YTKACE:\n\n' + (ROOT / 'licenses/YTKACE-MIT.txt').read_text())
+    manifest = {'notices_sha256': digest(notices), 'format': 1, 'version': (ROOT / 'VERSION').read_text().strip(),
                 'library_sha256': digest(library),
                 'contract': json.loads((ROOT / 'compatibility/contract.json').read_text())}
     (KIT / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
@@ -117,6 +119,11 @@ def package(source, output, kit, allow_untested):
             p.unlink()
         (app / 'Frameworks').mkdir(exist_ok=True)
         shutil.copy2(library, app / 'Frameworks/YouTubeMod.dylib')
+        if manifest.get('notices_sha256'):
+            notices = kit / 'THIRD_PARTY_NOTICES.txt'
+            if digest(notices) != manifest['notices_sha256']:
+                raise ValueError('Invalid third-party notices checksum')
+            shutil.copy2(notices, app / 'YouTubeMod-Licenses.txt')
         main.write_bytes(inject(main.read_bytes()))
         info['YouTubeModVersion'] = manifest['version']
         (app / 'Info.plist').write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_BINARY))

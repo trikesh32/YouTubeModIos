@@ -52,7 +52,7 @@ NSDictionary *YMSnapshot(void) {
     @synchronized(Rows()) {
         NSMutableDictionary *copy=[NSMutableDictionary new];
         for(NSString *key in Rows())copy[key]=[Rows()[key] copy];
-        return @{@"version":@"0.1.2",@"background_enabled":@(YMEnabled(YMBackgroundKey)),
+        return @{@"version":@"0.1.3",@"background_enabled":@(YMEnabled(YMBackgroundKey)),
             @"hooks":copy,@"shorts_modified":@NO};
     }
 }

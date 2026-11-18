@@ -2,19 +2,16 @@
 #import <AVFAudio/AVFAudio.h>
 #import <objc/runtime.h>
 #import "Core.h"
+#import "NativeMenu.h"
 #include <string.h>
 
-static NSMutableDictionary *MenuState(void) {
-    static NSMutableDictionary *state;static dispatch_once_t once;
-    dispatch_once(&once,^{state=[NSMutableDictionary new];});return state;
-}
 static NSMutableDictionary *LifecycleState(void) {
     static NSMutableDictionary *state;static dispatch_once_t once;
     dispatch_once(&once,^{state=[NSMutableDictionary new];});return state;
 }
 static NSDictionary *Diagnostics(void) {
     NSMutableDictionary *result=[YMSnapshot() mutableCopy];
-    result[@"menu"]=[MenuState() copy];
+    result[@"menu"]=YMNativeMenuSnapshot();
     result[@"lifecycle"]=[LifecycleState() copy];
     AVAudioSession *audio=AVAudioSession.sharedInstance;
     result[@"audio_session"]=@{@"category":audio.category?:@"unknown",@"mode":audio.mode?:@"unknown"};
@@ -38,7 +35,7 @@ static void SaveDiagnostics(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)table{return 2;}
 - (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section{return section==0?1:2;}
 - (NSString *)tableView:(UITableView *)table titleForFooterInSection:(NSInteger)section {
-    return section==0?@"Экспериментальное фоновое воспроизведение. После изменения открой видео заново. Shorts остаются без изменений.":@"0.1.2 — исследовательская сборка. Диагностика содержит только состояния и счётчики мода.";
+    return section==0?@"Экспериментальное фоновое воспроизведение. После изменения открой видео заново. Shorts остаются без изменений.":@"0.1.3 — исследовательская сборка. Диагностика содержит только состояния и счётчики мода.";
 }
 - (void)toggle:(UISwitch *)sender {YMSetEnabled(YMBackgroundKey,sender.on);SaveDiagnostics();}
 - (UITableViewCell *)tableView:(UITableView *)table cellForRowAtIndexPath:(NSIndexPath *)index {
@@ -49,7 +46,7 @@ static void SaveDiagnostics(void) {
         toggle.accessibilityLabel=cell.textLabel.text;[toggle addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged];
         cell.accessoryView=toggle;cell.selectionStyle=UITableViewCellSelectionStyleNone;
     } else if(index.row==0)cell.textLabel.text=@"Скопировать диагностику";
-    else {cell.textLabel.text=@"Версия мода";cell.detailTextLabel.text=@"0.1.2";cell.selectionStyle=UITableViewCellSelectionStyleNone;}
+    else {cell.textLabel.text=@"Версия мода";cell.detailTextLabel.text=@"0.1.3";cell.selectionStyle=UITableViewCellSelectionStyleNone;}
     return cell;
 }
 - (void)tableView:(UITableView *)table didSelectRowAtIndexPath:(NSIndexPath *)index {
@@ -62,53 +59,13 @@ static void SaveDiagnostics(void) {
 }
 @end
 
-@interface YMMenuTarget:NSObject
-@property(nonatomic,weak) UIViewController *owner;
-- (void)show;
-@end
-@implementation YMMenuTarget
-- (void)show {
-    UIViewController *owner=self.owner;if(!owner || owner.presentedViewController)return;
-    UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:[[YMSettingsController alloc] initWithStyle:UITableViewStyleInsetGrouped]];
-    [owner presentViewController:nav animated:YES completion:nil];
-}
-@end
-static char targetKey,buttonKey;
-static void Attach(UIViewController *controller) {
-    if(!controller.isViewLoaded || !controller.view.window)return;
-    YMMenuTarget *target=objc_getAssociatedObject(controller,&targetKey);
-    if(!target){target=[YMMenuTarget new];target.owner=controller;objc_setAssociatedObject(controller,&targetKey,target,OBJC_ASSOCIATION_RETAIN_NONATOMIC);}
-    UIBarButtonItem *button=objc_getAssociatedObject(controller,&buttonKey);
-    if(!button){button=[[UIBarButtonItem alloc] initWithTitle:@"Мод" style:UIBarButtonItemStylePlain target:target action:@selector(show)];button.accessibilityIdentifier=@"youtubeMod.settings";objc_setAssociatedObject(controller,&buttonKey,button,OBJC_ASSOCIATION_RETAIN_NONATOMIC);}
-    UINavigationController *nav=controller.navigationController;
-    UINavigationItem *item=nav.navigationBar.topItem?:controller.navigationItem;
-    NSMutableArray *items=[item.rightBarButtonItems mutableCopy]?:[NSMutableArray new];
-    NSIndexSet *old=[items indexesOfObjectsPassingTest:^BOOL(UIBarButtonItem *entry,NSUInteger idx,BOOL *stop){
-        return [entry.accessibilityIdentifier isEqualToString:@"youtubeMod.settings"];
-    }];
-    [items removeObjectsAtIndexes:old];[items addObject:button];item.rightBarButtonItems=items;
-    MenuState()[@"last_settings_class"]=NSStringFromClass(controller.class);
-    MenuState()[@"navigation_controller_present"]=@(nav!=nil);
-    MenuState()[@"navigation_bar_hidden"]=@(nav.navigationBarHidden);
-    MenuState()[@"button_attached"]=@YES;SaveDiagnostics();
-}
-static void InstallMenuForClass(NSString *name) {
-    if([MenuState()[name] isEqual:@"installed"])return;
-    Class cls=NSClassFromString(name);SEL selector=@selector(viewDidAppear:);
-    Method method=cls?class_getInstanceMethod(cls,selector):NULL;
-    if(!method || method_getNumberOfArguments(method)!=3){MenuState()[name]=@"missing_method";return;}
-    char *ret=method_copyReturnType(method),*arg=method_copyArgumentType(method,2);
-    BOOL valid=ret && arg && !strcmp(ret,"v") && !strcmp(arg,@encode(BOOL));free(ret);free(arg);if(!valid){MenuState()[name]=@"unsupported_abi";return;}
-    IMP original=method_getImplementation(method);
-    IMP hook=imp_implementationWithBlock(^(UIViewController *object,BOOL animated){
-        ((void(*)(id,SEL,BOOL))original)(object,selector,animated);
-        MenuState()[@"appearances"]=@([MenuState()[@"appearances"] unsignedLongLongValue]+1);
-        Attach(object);
-        __weak UIViewController *weakObject=object;
-        dispatch_async(dispatch_get_main_queue(),^{UIViewController *current=weakObject;if(current)Attach(current);});
-    });
-    if(!class_addMethod(cls,selector,hook,method_getTypeEncoding(method)))method_setImplementation(class_getInstanceMethod(cls,selector),hook);
-    MenuState()[name]=@"installed";
+static void PresentModSettings(id object) {
+    if(![object isKindOfClass:UIViewController.class])return;
+    UIViewController *owner=object;
+    if(owner.presentedViewController)return;
+    UINavigationController *nav=[[UINavigationController alloc] initWithRootViewController:
+        [[YMSettingsController alloc] initWithStyle:UITableViewStyleInsetGrouped]];
+    [owner presentViewController:nav animated:YES completion:nil];SaveDiagnostics();
 }
 static void InstallLifecycleDiagnostics(void) {
     static dispatch_once_t once;
@@ -127,12 +84,11 @@ static void InstallLifecycleDiagnostics(void) {
     });
 }
 static void Bootstrap(void) {
-    if(![[NSBundle.mainBundle objectForInfoDictionaryKey:@"YouTubeModVersion"] isEqual:@"0.1.2"])return;
+    if(![[NSBundle.mainBundle objectForInfoDictionaryKey:@"YouTubeModVersion"] isEqual:@"0.1.3"])return;
     YMInstall();
     InstallLifecycleDiagnostics();
-    InstallMenuForClass(@"YTSettingsViewController");
-    InstallMenuForClass(@"YTSearchableSettingsViewController");
-    MenuState()[@"bootstrap_completed"]=@YES;SaveDiagnostics();
+    YMInstallNativeMenu(^(id owner){PresentModSettings(owner);});
+    SaveDiagnostics();
 }
 __attribute__((constructor)) static void Start(void) {
     @autoreleasepool {

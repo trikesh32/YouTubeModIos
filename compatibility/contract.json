@@ -15,12 +15,6 @@
       "types": "B16@0:8"
     },
     {
-      "class": "YTSettingsViewController",
-      "kind": "-",
-      "selector": "viewDidAppear:",
-      "types": "v20@0:8B16"
-    },
-    {
       "class": "YTPlaybackData",
       "kind": "-",
       "selector": "isPlayableInBackground",
@@ -43,6 +37,54 @@
       "kind": "-",
       "selector": "isPlaybackBackgroundable",
       "types": "B16@0:8"
+    },
+    {
+      "class": "YTSettingsViewController",
+      "kind": "-",
+      "selector": "setSectionItems:forCategory:title:icon:titleDescription:headerHidden:",
+      "types": "v60@0:8@16Q24@32@40@48B56"
+    },
+    {
+      "class": "YTSettingsGroupData",
+      "kind": "-",
+      "selector": "initWithGroupType:",
+      "types": "@24@0:8Q16"
+    },
+    {
+      "class": "YTSettingsGroupData",
+      "kind": "-",
+      "selector": "titleForSettingGroupType:",
+      "types": "@24@0:8Q16"
+    },
+    {
+      "class": "YTSettingsGroupData",
+      "kind": "-",
+      "selector": "orderedCategoriesForGroupType:",
+      "types": "@24@0:8Q16"
+    },
+    {
+      "class": "YTAppSettingsGroupPresentationData",
+      "kind": "+",
+      "selector": "orderedGroups",
+      "types": "@16@0:8"
+    },
+    {
+      "class": "YTSettingsSectionItemManager",
+      "kind": "-",
+      "selector": "updateSectionForCategory:withEntry:",
+      "types": "v32@0:8Q16@24"
+    },
+    {
+      "class": "YTAppSettingsPresentationData",
+      "kind": "+",
+      "selector": "settingsCategoryOrder",
+      "types": "@16@0:8"
+    },
+    {
+      "class": "YTSettingsSectionItem",
+      "kind": "+",
+      "selector": "itemWithTitle:accessibilityIdentifier:detailTextBlock:selectBlock:",
+      "types": "@48@0:8@16@24@?32@?40"
     }
   ]
 }
