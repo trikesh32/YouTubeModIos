@@ -1,0 +1,14 @@
+private/
+build/
+dist/
+__pycache__/
+*.pyc
+*.ipa
+*.dylib
+*.deb
+*.mobileprovision
+*.p12
+*.pem
+*.key
+*.log
+.DS_Store

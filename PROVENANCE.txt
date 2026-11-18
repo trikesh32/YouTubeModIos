@@ -1,0 +1,5 @@
+Own implementation by trikesh32 contributors, 2026. MIT.
+Generic Mach-O injection and metadata helpers adapted from trikesh32/TikTokModIos (MIT).
+No YTLite/YouTube Plus source or binary is included. Prior technical research informed requirements; this is not claimed to be strict clean-room work.
+Apple/Google app binaries, signing material and account data are not part of this repository.
+Third-party features will carry their own licenses when integrated.

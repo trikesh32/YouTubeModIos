@@ -1,0 +1,24 @@
+{
+  "reference_version": "21.46.3",
+  "reference_origin": "Selected method shapes checked against locally downloaded and decrypted App Store YouTube; runtime validation pending",
+  "required_methods": [
+    {
+      "class": "YTIPlayabilityStatus",
+      "kind": "-",
+      "selector": "isPlayableInBackground",
+      "types": "B16@0:8"
+    },
+    {
+      "class": "MLVideo",
+      "kind": "-",
+      "selector": "playableInBackground",
+      "types": "B16@0:8"
+    },
+    {
+      "class": "YTSettingsViewController",
+      "kind": "-",
+      "selector": "viewDidAppear:",
+      "types": "v20@0:8B16"
+    }
+  ]
+}
