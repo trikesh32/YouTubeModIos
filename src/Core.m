@@ -41,12 +41,18 @@ BOOL YMInstallBool(Class cls,SEL selector,NSString *preference) {
 void YMInstall(void) {
     YMInstallBool(NSClassFromString(@"YTIPlayabilityStatus"),NSSelectorFromString(@"isPlayableInBackground"),YMBackgroundKey);
     YMInstallBool(NSClassFromString(@"MLVideo"),NSSelectorFromString(@"playableInBackground"),YMBackgroundKey);
+    // Current client consults both per-video eligibility and the playback policy.
+    // Keep lifecycle callbacks intact so interruptions and explicit pauses work.
+    YMInstallBool(NSClassFromString(@"YTPlaybackData"),NSSelectorFromString(@"isPlayableInBackground"),YMBackgroundKey);
+    YMInstallBool(NSClassFromString(@"YTBackgroundabilityPolicyImpl"),NSSelectorFromString(@"isBackgroundableByUserSettings"),YMBackgroundKey);
+    YMInstallBool(NSClassFromString(@"YTPlaybackBackgroundTaskController"),NSSelectorFromString(@"isContentPlayableInBackground"),YMBackgroundKey);
+    YMInstallBool(NSClassFromString(@"YTLocalPlaybackController"),NSSelectorFromString(@"isPlaybackBackgroundable"),YMBackgroundKey);
 }
 NSDictionary *YMSnapshot(void) {
     @synchronized(Rows()) {
         NSMutableDictionary *copy=[NSMutableDictionary new];
         for(NSString *key in Rows())copy[key]=[Rows()[key] copy];
-        return @{@"version":@"0.1.1",@"background_enabled":@(YMEnabled(YMBackgroundKey)),
+        return @{@"version":@"0.1.2",@"background_enabled":@(YMEnabled(YMBackgroundKey)),
             @"hooks":copy,@"shorts_modified":@NO};
     }
 }

@@ -19,6 +19,30 @@
       "kind": "-",
       "selector": "viewDidAppear:",
       "types": "v20@0:8B16"
+    },
+    {
+      "class": "YTPlaybackData",
+      "kind": "-",
+      "selector": "isPlayableInBackground",
+      "types": "B16@0:8"
+    },
+    {
+      "class": "YTBackgroundabilityPolicyImpl",
+      "kind": "-",
+      "selector": "isBackgroundableByUserSettings",
+      "types": "B16@0:8"
+    },
+    {
+      "class": "YTPlaybackBackgroundTaskController",
+      "kind": "-",
+      "selector": "isContentPlayableInBackground",
+      "types": "B16@0:8"
+    },
+    {
+      "class": "YTLocalPlaybackController",
+      "kind": "-",
+      "selector": "isPlaybackBackgroundable",
+      "types": "B16@0:8"
     }
   ]
 }

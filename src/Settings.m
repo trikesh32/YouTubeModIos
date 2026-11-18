@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <AVFAudio/AVFAudio.h>
 #import <objc/runtime.h>
 #import "Core.h"
 #include <string.h>
@@ -7,9 +8,18 @@ static NSMutableDictionary *MenuState(void) {
     static NSMutableDictionary *state;static dispatch_once_t once;
     dispatch_once(&once,^{state=[NSMutableDictionary new];});return state;
 }
+static NSMutableDictionary *LifecycleState(void) {
+    static NSMutableDictionary *state;static dispatch_once_t once;
+    dispatch_once(&once,^{state=[NSMutableDictionary new];});return state;
+}
 static NSDictionary *Diagnostics(void) {
     NSMutableDictionary *result=[YMSnapshot() mutableCopy];
-    result[@"menu"]=[MenuState() copy];return result;
+    result[@"menu"]=[MenuState() copy];
+    result[@"lifecycle"]=[LifecycleState() copy];
+    AVAudioSession *audio=AVAudioSession.sharedInstance;
+    result[@"audio_session"]=@{@"category":audio.category?:@"unknown",@"mode":audio.mode?:@"unknown"};
+    result[@"background_audio_declared"]=@([[NSBundle.mainBundle objectForInfoDictionaryKey:@"UIBackgroundModes"] containsObject:@"audio"]);
+    return result;
 }
 static void SaveDiagnostics(void) {
     NSData *data=[NSJSONSerialization dataWithJSONObject:Diagnostics() options:NSJSONWritingPrettyPrinted error:nil];
@@ -28,7 +38,7 @@ static void SaveDiagnostics(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)table{return 2;}
 - (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section{return section==0?1:2;}
 - (NSString *)tableView:(UITableView *)table titleForFooterInSection:(NSInteger)section {
-    return section==0?@"Экспериментальное фоновое воспроизведение. После изменения открой видео заново. Shorts остаются без изменений.":@"0.1.1 — исследовательская сборка. Диагностика содержит только состояния и счётчики мода.";
+    return section==0?@"Экспериментальное фоновое воспроизведение. После изменения открой видео заново. Shorts остаются без изменений.":@"0.1.2 — исследовательская сборка. Диагностика содержит только состояния и счётчики мода.";
 }
 - (void)toggle:(UISwitch *)sender {YMSetEnabled(YMBackgroundKey,sender.on);SaveDiagnostics();}
 - (UITableViewCell *)tableView:(UITableView *)table cellForRowAtIndexPath:(NSIndexPath *)index {
@@ -39,7 +49,7 @@ static void SaveDiagnostics(void) {
         toggle.accessibilityLabel=cell.textLabel.text;[toggle addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged];
         cell.accessoryView=toggle;cell.selectionStyle=UITableViewCellSelectionStyleNone;
     } else if(index.row==0)cell.textLabel.text=@"Скопировать диагностику";
-    else {cell.textLabel.text=@"Версия мода";cell.detailTextLabel.text=@"0.1.1";cell.selectionStyle=UITableViewCellSelectionStyleNone;}
+    else {cell.textLabel.text=@"Версия мода";cell.detailTextLabel.text=@"0.1.2";cell.selectionStyle=UITableViewCellSelectionStyleNone;}
     return cell;
 }
 - (void)tableView:(UITableView *)table didSelectRowAtIndexPath:(NSIndexPath *)index {
@@ -100,9 +110,26 @@ static void InstallMenuForClass(NSString *name) {
     if(!class_addMethod(cls,selector,hook,method_getTypeEncoding(method)))method_setImplementation(class_getInstanceMethod(cls,selector),hook);
     MenuState()[name]=@"installed";
 }
+static void InstallLifecycleDiagnostics(void) {
+    static dispatch_once_t once;
+    dispatch_once(&once,^{
+        NSDictionary *events=@{UIApplicationDidEnterBackgroundNotification:@"entered_background",
+            UIApplicationWillEnterForegroundNotification:@"entered_foreground",
+            UIApplicationDidBecomeActiveNotification:@"became_active"};
+        for(NSString *notification in events) {
+            NSString *name=events[notification];
+            [NSNotificationCenter.defaultCenter addObserverForName:notification object:nil
+                queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note){
+                LifecycleState()[name]=@([LifecycleState()[name] unsignedLongLongValue]+1);
+                LifecycleState()[@"last_event"]=name;SaveDiagnostics();
+            }];
+        }
+    });
+}
 static void Bootstrap(void) {
-    if(![[NSBundle.mainBundle objectForInfoDictionaryKey:@"YouTubeModVersion"] isEqual:@"0.1.1"])return;
+    if(![[NSBundle.mainBundle objectForInfoDictionaryKey:@"YouTubeModVersion"] isEqual:@"0.1.2"])return;
     YMInstall();
+    InstallLifecycleDiagnostics();
     InstallMenuForClass(@"YTSettingsViewController");
     InstallMenuForClass(@"YTSearchableSettingsViewController");
     MenuState()[@"bootstrap_completed"]=@YES;SaveDiagnostics();

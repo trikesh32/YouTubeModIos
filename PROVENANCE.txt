@@ -3,3 +3,10 @@ Generic Mach-O injection and metadata helpers adapted from trikesh32/TikTokModIo
 No YTLite/YouTube Plus source or binary is included. Prior technical research informed requirements; this is not claimed to be strict clean-room work.
 Apple/Google app binaries, signing material and account data are not part of this repository.
 Third-party features will carry their own licenses when integrated.
+
+Playback/menu research reference: itzzace/ytkace (MIT), commit
+5f8cb77bbd50249d2561a129afd3bb04313568ee. Read BackgroundPlaybackHooks.mm,
+PlaybackFixHooks.mm, NativeSettingsEntry.mm and SettingsEntry.mm while comparing
+approaches. No source from these files was incorporated in 0.1.2. The four new
+background getter signatures were independently checked in the local YouTube
+21.46.3 Objective-C metadata. This research does not establish runtime behavior.
